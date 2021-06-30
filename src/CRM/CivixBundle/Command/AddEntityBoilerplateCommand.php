@@ -71,6 +71,8 @@ class AddEntityBoilerplateCommand extends \Symfony\Component\Console\Command\Com
     $config->phpCodePath = $basedir->string('');
     $config->sqlCodePath = $basedir->string('sql/');
 
+    $database['tableAttributes_modern'] = 'ENGINE=InnoDB';
+
     foreach ($xmlSchemas as $xmlSchema) {
       $dom = new \DomDocument();
       $xmlString = file_get_contents($xmlSchema);
@@ -83,7 +85,8 @@ class AddEntityBoilerplateCommand extends \Symfony\Component\Console\Command\Com
       $specification->getTable($xml, $database, $tables);
       $name = (string) $xml->name;
       $tables[$name]['name'] = $name;
-      $tables[$name]['sourceFile'] = $xmlSchema;
+      $sourcePath = strstr($xmlSchema, "/xml/schema/{$ctx['namespace']}/");
+      $tables[$name]['sourceFile'] = $ctx['fullName'] . $sourcePath;
     }
 
     $config->tables = $tables;
@@ -155,12 +158,14 @@ class AddEntityBoilerplateCommand extends \Symfony\Component\Console\Command\Com
           $ordered[$k] = $table;
           unset($tables[$k]);
         }
-        foreach ($table['foreignKey'] as $fKey) {
-          if (in_array($fKey['table'], array_keys($tables))) {
-            continue;
+        if (isset($table['foreignKey'])) {
+          foreach ($table['foreignKey'] as $fKey) {
+            if (in_array($fKey['table'], array_keys($tables))) {
+              continue;
+            }
+            $ordered[$k] = $table;
+            unset($tables[$k]);
           }
-          $ordered[$k] = $table;
-          unset($tables[$k]);
         }
       }
     }
